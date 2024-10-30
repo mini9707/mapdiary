@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Map</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@latest/en/v6.5.0/css/ol.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #map { width: 100%; height: 500px; }
+    </style>
+</head>
+<body>
+<h2>Map with Points</h2>
+<div id="map"></div>
+
+<script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@latest/en/v6.5.0/build/ol.js"></script>
+<script>
+    const map = new ol.Map({
+        target: 'map',
+        layers: [
+            new ol.layer.Tile({ source: new ol.source.OSM() })
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([126.9780, 37.5665]),
+            zoom: 10
+        })
+    });
+
+    const vectorSource = new ol.source.Vector();
+    const vectorLayer = new ol.layer.Vector({
+        source: vectorSource,
+        style: new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({ color: 'red' }),
+                stroke: new ol.style.Stroke({ color: 'black', width: 1 })
+            })
+        })
+    });
+    map.addLayer(vectorLayer);
+
+    map.on('click', function(event) {
+        const featureAtPixel = map.forEachFeatureAtPixel(event.pixel, function(feature) {
+            return feature;
+        });
+
+        if (!featureAtPixel) {
+            const coordinates = ol.proj.toLonLat(event.coordinate);
+            const x = coordinates[0];
+            const y = coordinates[1];
+
+            const name = prompt("Enter your name:");
+            if (name) {
+                $.ajax({
+                    url: "/api/locations",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({ name: name, x: x, y: y }),
+                    success: function(response) {
+                        const pointFeature = new ol.Feature({
+                            geometry: new ol.geom.Point(event.coordinate),
+                            name: response.name
+                        });
+                        vectorSource.addFeature(pointFeature);
+                    },
+                    error: function(error) {
+                        console.error("Error saving location:", error);
+                    }
+                });
+            }
+        }
+    });
+
+    function loadLocations() {
+        $.ajax({
+            url: "/api/locations",
+            type: "GET",
+            success: function(locations) {
+                locations.forEach(location => {
+                    const coord = ol.proj.fromLonLat([location.x, location.y]);
+                    const pointFeature = new ol.Feature({
+                        geometry: new ol.geom.Point(coord),
+                        name: location.name
+                    });
+                    vectorSource.addFeature(pointFeature);
+                });
+            },
+            error: function(error) {
+                console.error("Error loading locations:", error);
+            }
+        });
+    }
+    loadLocations();
+    map.on('singleclick', function(event) {
+        map.forEachFeatureAtPixel(event.pixel, function(feature) {
+            const name = feature.get('name');
+            if (name) {
+                alert("Name: " + name);
+            }
+        });
+    });
+</script>
+</body>
+</html>
