@@ -27,6 +27,22 @@
         })
     });
 
+    // GeoServer에서 발행한 WMS 레이어 추가
+    const wmsLayer = new ol.layer.Tile({
+        source: new ol.source.TileWMS({
+            url: 'http://localhost:8080/geoserver/new/wms?service=WMS', // 1. 레이어 URL
+            params: {
+                'VERSION' : '1.1.0', // 2. 버전
+                'LAYERS': 'new:GG'  // 3. 작업공간 : 레이어 명 -> 지오서버
+                // 'FORMAT' : 'image/png'
+                // 'TILED': true,
+                // 'SRS' : 'EPSG:5179' // 좌표설정
+            },
+            serverType: 'geoserver'
+        })
+    });
+    map.addLayer(wmsLayer);
+
     // 벡터 소스를 정의하고 이를 사용하여 벡터 레이어를 지도에 추가
     const vectorSource = new ol.source.Vector();
     const vectorLayer = new ol.layer.Vector({
