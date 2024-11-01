@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>Map</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@latest/en/v6.5.0/css/ol.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- jQuery 추가 -->
     <style>
-        #map { width: 100%; height: 500px; }
+        #map { width: 100%; height: 700px; } <!-- 지도의 크기 설정 -->
     </style>
 </head>
 <body>
@@ -15,87 +15,99 @@
 
 <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@latest/en/v6.5.0/build/ol.js"></script>
 <script>
+    // OpenLayers 지도를 설정하고 OpenStreetMap 기본 타일 레이어 추가
     const map = new ol.Map({
-        target: 'map',
+        target: 'map', // 지도가 표시될 HTML 요소의 ID 지정
         layers: [
-            new ol.layer.Tile({ source: new ol.source.OSM() })
+            new ol.layer.Tile({ source: new ol.source.OSM() }) // OSM을 기본 타일 레이어로 설정
         ],
         view: new ol.View({
-            center: ol.proj.fromLonLat([126.9780, 37.5665]),
-            zoom: 10
+            center: ol.proj.fromLonLat([126.9780, 37.5665]), // 지도의 초기 중심을 서울 좌표로 설정
+            zoom: 10 // 초기 확대 수준 설정
         })
     });
 
+    // 벡터 소스를 정의하고 이를 사용하여 벡터 레이어를 지도에 추가
     const vectorSource = new ol.source.Vector();
     const vectorLayer = new ol.layer.Vector({
-        source: vectorSource,
-        style: new ol.style.Style({
+        source: vectorSource, // 벡터 소스를 지정하여 포인트를 관리
+        style: new ol.style.Style({ // 포인트의 스타일 설정
             image: new ol.style.Circle({
                 radius: 6,
-                fill: new ol.style.Fill({ color: 'red' }),
-                stroke: new ol.style.Stroke({ color: 'black', width: 1 })
+                fill: new ol.style.Fill({ color: 'red' }), // 포인트 내부 색상
+                stroke: new ol.style.Stroke({ color: 'black', width: 1 }) // 포인트 테두리 색상과 두께
             })
         })
     });
-    map.addLayer(vectorLayer);
+    map.addLayer(vectorLayer); // 지도의 벡터 레이어 추가
 
+    // 지도를 클릭했을 때 발생하는 이벤트
     map.on('click', function(event) {
+        // 클릭한 위치에 이미 포인트가 있는지 확인
         const featureAtPixel = map.forEachFeatureAtPixel(event.pixel, function(feature) {
             return feature;
         });
 
+        // 클릭한 위치에 포인트가 없을 경우에만 새로운 포인트 추가
         if (!featureAtPixel) {
-            const coordinates = ol.proj.toLonLat(event.coordinate);
-            const x = coordinates[0];
-            const y = coordinates[1];
+            const coordinates = ol.proj.toLonLat(event.coordinate); // 클릭한 좌표를 경도/위도 형식으로 변환
+            const x = coordinates[0]; // x 좌표(경도)
+            const y = coordinates[1]; // y 좌표(위도)
 
+            // 사용자에게 이름을 입력받고 이를 서버에 저장
             const name = prompt("Enter your name:");
             if (name) {
+                // 서버에 좌표와 이름을 저장하기 위해 POST 요청을 보냄
                 $.ajax({
-                    url: "/api/locations",
+                    url: "/api/locations", // 좌표를 저장할 서버의 엔드포인트
                     type: "POST",
                     contentType: "application/json",
-                    data: JSON.stringify({ name: name, x: x, y: y }),
+                    data: JSON.stringify({ name: name, x: x, y: y }), // JSON 형식으로 좌표와 이름 데이터 전송
                     success: function(response) {
+                        // 요청 성공 시, 새 포인트를 지도에 추가
                         const pointFeature = new ol.Feature({
-                            geometry: new ol.geom.Point(event.coordinate),
-                            name: response.name
+                            geometry: new ol.geom.Point(event.coordinate), // 클릭한 좌표에 포인트 생성
+                            name: response.name // 서버로부터 받은 이름 설정
                         });
-                        vectorSource.addFeature(pointFeature);
+                        vectorSource.addFeature(pointFeature); // 벡터 소스에 포인트 추가
                     },
                     error: function(error) {
-                        console.error("Error saving location:", error);
+                        console.error("Error saving location:", error); // 요청 실패 시 오류 메시지 출력
                     }
                 });
             }
         }
     });
 
+    // 서버에서 저장된 모든 좌표 데이터를 불러오는 함수
     function loadLocations() {
         $.ajax({
-            url: "/api/locations",
+            url: "/api/locations", // 좌표를 가져올 서버의 엔드포인트
             type: "GET",
             success: function(locations) {
+                // 각 위치 데이터를 받아 지도에 포인트로 표시
                 locations.forEach(location => {
-                    const coord = ol.proj.fromLonLat([location.x, location.y]);
+                    const coord = ol.proj.fromLonLat([location.x, location.y]); // 좌표를 지도 좌표로 변환
                     const pointFeature = new ol.Feature({
-                        geometry: new ol.geom.Point(coord),
-                        name: location.name
+                        geometry: new ol.geom.Point(coord), // 변환된 좌표에 포인트 생성
+                        name: location.name // 위치에 대한 이름을 설정
                     });
-                    vectorSource.addFeature(pointFeature);
+                    vectorSource.addFeature(pointFeature); // 벡터 소스에 포인트 추가
                 });
             },
             error: function(error) {
-                console.error("Error loading locations:", error);
+                console.error("Error loading locations:", error); // 요청 실패 시 오류 메시지 출력
             }
         });
     }
-    loadLocations();
+    loadLocations(); // 페이지 로드 시 서버에서 위치 데이터를 불러옴
+
+    // 포인트를 클릭할 때마다 이름을 alert 창으로 표시
     map.on('singleclick', function(event) {
         map.forEachFeatureAtPixel(event.pixel, function(feature) {
-            const name = feature.get('name');
+            const name = feature.get('name'); // 클릭한 포인트의 이름을 가져옴
             if (name) {
-                alert("Name: " + name);
+                alert("Name: " + name); // 이름을 alert 창으로 표시
             }
         });
     });
