@@ -11,6 +11,7 @@
 </head>
 <body>
 <h2>Map with Points</h2>
+<button id="layer_btn">레이어 숨기기</button>
 <div id="map"></div>
 
 <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@latest/en/v6.5.0/build/ol.js"></script>
@@ -42,6 +43,14 @@
         })
     });
     map.addLayer(wmsLayer);
+
+    // 레이어 표시 버튼
+    const layerButton = document.getElementById("layer_btn");
+    layerButton.addEventListener("click", function() {
+        const isVisible = wmsLayer.getVisible();
+        wmsLayer.setVisible(!isVisible);
+        this.textContent = isVisible ? "레이어 보이기" : "레이어 숨기기"; // 버튼 텍스트 변경
+    });
 
     // 벡터 소스를 정의하고 이를 사용하여 벡터 레이어를 지도에 추가
     const vectorSource = new ol.source.Vector();
